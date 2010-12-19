@@ -1,11 +1,12 @@
 var cocos   = require('cocos2d'),
     geo     = require('geometry');
 
-/**
- * @class
- * @extends cocos.nodes.TMXTiledMap
- */
-var Map = cocos.nodes.TMXTiledMap.extend(/** @scope Map# */{
+var Map = cocos.nodes.TMXTiledMap.extend(/** @scope coconut.Map# */{
+    /**
+     * @memberOf coconut
+     * @extends cocos.nodes.TMXTiledMap
+     * @constructs
+     */
     init: function(opts) {
         @super;
     },
