@@ -35,19 +35,6 @@ var Camera = Entity.extend(/** @lends coconut.entities.Camera# */{
     init: function() {
         @super;
 
-        /*
-        function updateIcon() {
-            var s = this.get('contentSize');
-            this.icon_.set('position', geo.ccp(s.width/2, s.height/2));
-        }
-        this.icon_ = cocos.nodes.Sprite.create({file: '/resources/camera-icon.png'});
-        this.icon_.set('opacity', 0.5);
-        this.addChild(this.icon_);
-
-        // When size changes readjust the icon so it's always centred
-        event.addListener(this, 'contentsize_changed', util.callback(this, updateIcon));
-        */
-
         this.set('offset', geo.ccp(0, 0));
 
         // Camera is always the size of the entire view
@@ -91,14 +78,49 @@ var Camera = Entity.extend(/** @lends coconut.entities.Camera# */{
         }
 
         this.set('position', pos);
+    },
+
+    get_boundingBox: function() {
+        var rect = @super;
+        rect.origin = geo.ccpAdd(rect.origin, this.get('offset'));
+
+        return rect;
     }
 
 
 });
 
+var OffsetTo = cocos.actions.ActionInterval.extend({
+    dstOffset: null,
+    startOffset: null,
+    diffOffset: null,
+
+    init: function(opts) {
+        @super;
+
+        this.set('dstOffset', util.copy(opts.offset));
+    },
+
+    startWithTarget: function(target) {
+        @super;
+
+        this.set('startOffset', util.copy(target.get('offset')));
+        this.set('diffOffset', geo.ccpSub(this.get('dstOffset'), this.get('startOffset')));
+    },
+
+    update: function(t) {
+        var start = this.get('startOffset'),
+            diff  = this.get('diffOffset');
+        this.target.set('offset', geo.ccp(start.x + diff.x * t, start.y + diff.y * t));
+    }
+});
+
+
 
 var PlayerCamera = Camera.extend(/** @lends coconut.entities.PlayerCamera# */{
     trackDirection: 0,
+    entityOffset: 32,
+    moveTolerance: 64,
 
     /**
      * Similar to a normal camera but will adjust itself to an optimal position
@@ -110,88 +132,107 @@ var PlayerCamera = Camera.extend(/** @lends coconut.entities.PlayerCamera# */{
         @super;
         
         this.set('worldBound', false);
-        this.set('trackDirection', PlayerCamera.TRACK_RIGHT);
+        this.set('trackDirection', PlayerCamera.TRACK_LEFT);
     },
 
     update: function() {
-        var e = this.get('targetEntity'),
-            oldPos = this.get('position');
+        var entity = this.get('targetEntity'),
+            entityBox = entity.get('boundingBox'),  // Rectangle around the entity
+            entityBoxRel = util.copy(entityBox),
+            cameraBox = this.get('boundingBox'),    // The camera view area
+            entityPrevPosition = this.entityPrevPosition_ || util.copy(entityBox.origin),  // Where the entity was previous frame
+            vector = geo.ccpSub(entityBox.origin, entityPrevPosition),      // How the entity moved since last frame
+            trackDirection = this.get('trackDirection'),
+            entityOffset = this.get('entityOffset'),
+            moveTolerance = this.get('moveTolerance'),
+            offset = this.get('offset');
+
+        // Adjust entityBox origin so it's relative to the camera
+        entityBoxRel.origin = geo.ccpSub(entityBoxRel.origin, cameraBox.origin);
+
+        // Where the camera will move to
+        var newPosition = util.copy(entityBox.origin);
+
+        // Update entity's previous position so we can calculate the vector next frame
+        this.entityPrevPosition_ = util.copy(entityBox.origin);
 
 
-        // Camera view area
-        var camRect = geo.rectMake(0, 0, 0 ,0);
-        camRect.origin = geo.ccpSub(oldPos, this.get('anchorPointInPixels'));
-        camRect.size = util.copy(this.get('contentSize'));
+        if ((entityBoxRel.origin.x + entityBoxRel.size.width > (cameraBox.size.width/2) + moveTolerance && trackDirection == PlayerCamera.TRACK_LEFT) ||
+        (entityBoxRel.origin.x < (cameraBox.size.width/2) - moveTolerance && trackDirection == PlayerCamera.TRACK_RIGHT)) {
+            // Swap directions
+            trackDirection = -trackDirection;
+            this.set('trackDirection', trackDirection);
 
-        var entityPosition = e.get('position');
-        // Round off coords to prevent wobbly camera
-        entityPosition.x = Math.round(entityPosition.x);
-        entityPosition.y = Math.round(entityPosition.y);
-
-        var entityPrevPosition = this.entityPrevPosition_ || entityPosition,
-            distance = geo.ccpSub(entityPosition, entityPrevPosition);
-
-        this.entityPrevPosition_ = util.copy(entityPosition);
-
-        var entRect = geo.rectMake(0, 0, 0, 0);
-        entRect.origin = geo.ccpSub(entityPosition, e.get('anchorPointInPixels'));
-        entRect.size = util.copy(e.get('contentSize'));
-
-        var entCamRect = util.copy(entRect);
-        entCamRect.origin = geo.ccpSub(entRect.origin, camRect.origin);
-
-
-        var tracking = this.get('trackDirection');
-        if (distance.x > 0) {
-            // Moving right
-            if (tracking == PlayerCamera.TRACK_RIGHT) {
-                // Already tracking the player moving right so just update the position
-                if (this.get('offset').x > camRect.size.width * (0.2/3)) {
-                    // Readjust camera if moved left recently
-                    this.set('offset', geo.ccp(this.get('offset').x - distance.x, 0));
-                }
-            } else {
-                // Player recently changed direction
-
-                if (entCamRect.origin.x + entCamRect.size.width > camRect.size.width * (2/3)) {
-                    // Player has walked enough so now follow player
-                    this.set('offset', geo.ccp(camRect.size.width * (0.2/3), 0));
-                    this.set('trackDirection', PlayerCamera.TRACK_RIGHT);
-                } else {
-                    // Adjust offset so camera appears still
-                    this.set('offset', geo.ccp(this.get('offset').x - distance.x, 0));
-                }
+            var dstOffset = geo.ccp(trackDirection * entityOffset, offset.y);
+            if (trackDirection == PlayerCamera.TRACK_RIGHT) {
+                dstOffset.x += entityBoxRel.size.width;
             }
-        } else if (distance.x < 0) {
-            if (tracking == PlayerCamera.TRACK_LEFT) {
-                // Already tracking the player moving left so just update the position
-                if (this.get('offset').x < -camRect.size.width * (0.2/3)) {
-                    // Readjust camera if moved right recently
-                    this.set('offset', geo.ccp(this.get('offset').x - distance.x, 0));
-                }
-            } else {
-                // Player recently changed direction
 
-                if (entCamRect.origin.x < camRect.size.width * (1/3)) {
-                    // Player has walked enough so now follow player
-                    this.set('offset', geo.ccp(-camRect.size.width * (0.2/3), 0));
-                    this.set('trackDirection', PlayerCamera.TRACK_LEFT);
-                } else {
-                    // Adjust offset so camera appears still
-                    this.set('offset', geo.ccp(this.get('offset').x - distance.x, 0));
-                }
+            if (this.offsetAction_ && this.actions) {
+                cocos.ActionManager.get('sharedManager').removeAction(this.offsetAction_);
             }
+            this.offsetAction_ = OffsetTo.create({duration: 0.3, offset: dstOffset});    
+            this.runAction(this.offsetAction_);
         }
         
+        else if ((vector.x > 0 && trackDirection == PlayerCamera.TRACK_LEFT) || (vector.x < 0 && trackDirection == PlayerCamera.TRACK_RIGHT)) {
+            this.set('offset', geo.ccp(offset.x - vector.x, offset.y));
+        } else {
+        }
 
 
-        var newPos = geo.ccpAdd(entityPosition, this.get('offset'));
-        this.set('position', newPos);
+        this.set('position', newPosition);
+
+        return;
+
+        // Entity moving it opposite direction that we're tracking, watch if
+        // they enter the end 3rd of the screen then change tracking direction
+        if ((entityBoxRel.origin.x < cameraBox.size.width * (1/3) && trackDirection == PlayerCamera.TRACK_RIGHT) ||
+            (entityBoxRel.origin.x + entityBoxRel.size.width > cameraBox.size.width * (2/3) && trackDirection == PlayerCamera.TRACK_LEFT)) {
+
+            // Swap directions
+            trackDirection = -trackDirection;
+            this.set('trackDirection', -trackDirection);
+
+            // Move camera but adjust offset to it appears in the original
+            // location, then we'll animate the offset to where it should be
+            //this.set('offset', geo.ccp(entityBoxRel.origin.x + offset.x, offset.y));
+
+            var dstOffset = geo.ccp(trackDirection * entityOffset, offset.y);
+            var action = OffsetTo.create({duration: 3, offset: dstOffset});    
+            //this.runAction(action);
+
+            this.set('offset', dstOffset);
+
+        }
+
+
+        console.log(trackDirection);
+        
+        // Entity is moving in the direction we're tracking so move camera to follow them
+        // Moving RIGHT
+        if (vector.x > 0 && trackDirection == PlayerCamera.TRACK_RIGHT){
+            //if (Math.round(entityBoxRel.origin.x + entityBoxRel.size.width) >= Math.round(cameraBox.size.width /2) - entityOffset) {
+                newPosition.x = Math.round(entityBox.origin.x);
+            //}
+        }
+        
+        // Moving LEFT
+        else if (vector.x < 0 && trackDirection == PlayerCamera.TRACK_LEFT) {
+            //if (Math.round(entityBoxRel.origin.x) <= Math.round((cameraBox.size.width + entityOffset) /2)) {
+                newPosition.x = Math.round(entityBox.origin.x);
+            //}
+        }
+
+
+
+
+        this.set('position', newPosition);
     }
 });
 
-PlayerCamera.TRACK_LEFT = 1;
-PlayerCamera.TRACK_RIGHT = 2;
+PlayerCamera.TRACK_LEFT = -1;
+PlayerCamera.TRACK_RIGHT = 1;
 
 exports.Camera = Camera;
 exports.PlayerCamera = PlayerCamera;

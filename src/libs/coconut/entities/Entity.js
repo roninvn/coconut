@@ -73,6 +73,18 @@ var Entity = cocos.nodes.Node.extend(/** @lends coconut.entities.Entity# */{
         for (var i = 0, len = this.components.length; i < len; i++) {
             this.components[i].update(dt);
         }
+    },
+
+    get_boundingBox: function() {
+        var cs = this.get('contentSize'),
+            pos = this.get('position'),
+            ap = this.get('anchorPointInPixels'),
+            rect = geo.rectMake(0, 0, cs.width, cs.height);
+    
+        rect.origin.x = pos.x - ap.x;
+        rect.origin.y = pos.y - ap.y;
+
+        return rect;
     }
 });
 

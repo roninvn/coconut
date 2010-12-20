@@ -90,8 +90,9 @@ var World = cocos.nodes.Layer.extend(/** @scope coconut.World# */{
     },
 
     updateView: function() {
-        var camPos = this.get('currentCamera').get('position'),
-            camAnchor = this.get('currentCamera').get('anchorPointInPixels'),
+        var cam = this.get('currentCamera'),
+            camPos = geo.ccpAdd(cam.get('position'), cam.get('offset')),
+            camAnchor = cam.get('anchorPointInPixels'),
             newPos = geo.ccpAdd(geo.ccpNeg(camPos), camAnchor);
 
         this.set('position', newPos);
