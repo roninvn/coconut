@@ -164,7 +164,8 @@ var OffsetAxisTo = cocos.actions.ActionInterval.extend({
 var PlayerCamera = Camera.extend(/** @lends coconut.entities.PlayerCamera# */{
     trackDirection: 0,
     entityOffset: 32,
-    moveTolerance: 64,
+    moveTolerance: null,
+    speed: 120, // pixels per second when animating camera
 
     /**
      * Similar to a normal camera but will adjust itself to an optimal position
@@ -176,20 +177,22 @@ var PlayerCamera = Camera.extend(/** @lends coconut.entities.PlayerCamera# */{
         @super;
         
         this.set('trackDirection', PlayerCamera.TRACK_NONE);
+        this.set('moveTolerance', geo.ccp(64, 64));
     },
 
     update: function() {
-        var entity = this.get('targetEntity'),
-            entityBox = entity.get('boundingBox'),  // Rectangle around the entity
-            entityBoxRel = util.copy(entityBox),
-            cameraBox = this.get('boundingBox'),    // The camera view area
-            entityPrevPosition = this.entityPrevPosition_ || util.copy(entityBox.origin),  // Where the entity was previous frame
-            vector = geo.ccpSub(entityBox.origin, entityPrevPosition),      // How the entity moved since last frame
-            trackDirection = this.get('trackDirection'),
-            entityOffset = this.get('entityOffset'),
-            moveTolerance = this.get('moveTolerance'),
-            offset = this.get('offset'),
-            newOffset = util.copy(offset);
+        var entity              = this.get('targetEntity'),
+            entityBox           = entity.get('boundingBox'),  // Rectangle around the entity
+            entityBoxRel        = util.copy(entityBox),
+            cameraBox           = this.get('boundingBox'),    // The camera view area
+            entityPrevPosition  = this.entityPrevPosition_ || util.copy(entityBox.origin),  // Where the entity was previous frame
+            vector              = geo.ccpSub(entityBox.origin, entityPrevPosition),      // How the entity moved since last frame
+            trackDirection      = this.get('trackDirection'),
+            entityOffset        = this.get('entityOffset'),
+            moveTolerance       = this.get('moveTolerance'),
+            offset              = this.get('offset'),
+            newOffset           = util.copy(offset),
+            cameraSpeed         = this.get('speed');
 
 
         // Adjust entityBox origin so it's relative to the camera
@@ -201,11 +204,15 @@ var PlayerCamera = Camera.extend(/** @lends coconut.entities.PlayerCamera# */{
         // Update entity's previous position so we can calculate the vector next frame
         this.entityPrevPosition_ = util.copy(entityBox.origin);
 
+        // Play action to animate camera moving
+        var playXAction = false,
+            playYAction = false;
+
         // Readjust horizontal camera position when moveing around
         if (vector.x != 0) {
             // Walking in opposite direction of tracking and hit moveTolerance so readjust camera track new direction
-            if ((entityBoxRel.origin.x + entityBoxRel.size.width > (cameraBox.size.width/2) + moveTolerance && trackDirection != PlayerCamera.TRACK_RIGHT) ||
-            (entityBoxRel.origin.x < (cameraBox.size.width/2) - moveTolerance && trackDirection != PlayerCamera.TRACK_LEFT)) {
+            if ((entityBoxRel.origin.x + entityBoxRel.size.width > (cameraBox.size.width/2) + moveTolerance.x && trackDirection != PlayerCamera.TRACK_RIGHT) ||
+            (entityBoxRel.origin.x < (cameraBox.size.width/2) - moveTolerance.x && trackDirection != PlayerCamera.TRACK_LEFT)) {
                 // Swap directions
                 trackDirection = (vector.x > 0) ? PlayerCamera.TRACK_RIGHT : PlayerCamera.TRACK_LEFT;
                 this.set('trackDirection', trackDirection);
@@ -219,8 +226,12 @@ var PlayerCamera = Camera.extend(/** @lends coconut.entities.PlayerCamera# */{
                     cocos.ActionManager.get('sharedManager').removeAction(this.offsetXAction_);
                     delete this.offsetXAction_;
                 }
-                this.offsetXAction_ = OffsetAxisTo.create({duration: 0.7, offset: dstOffset, axis: 'x'});
-                this.runAction(this.offsetXAction_);
+
+                // Calculate duration of animation
+                var dur = Math.abs(newOffset.x - dstOffset) / cameraSpeed;
+
+                this.offsetXAction_ = OffsetAxisTo.create({duration: dur, offset: dstOffset, axis: 'x'});
+                playXAction = true;
             }
             
             // Walking in direction opposite to tracking
@@ -233,6 +244,38 @@ var PlayerCamera = Camera.extend(/** @lends coconut.entities.PlayerCamera# */{
             }
         }
 
+        newOffset.y -= vector.y;
+
+        // Just landed on the ground -- Move camera to centre on entity
+        if (entity.get('grounded') && !this.landed_) {
+            this.landed_ = true;
+
+            if (this.offsetYAction_) {
+                cocos.ActionManager.get('sharedManager').removeAction(this.offsetYAction_);
+            }
+
+
+            // Calculate duration of animation
+            var dur = Math.abs(newOffset.y) / cameraSpeed;
+
+            this.offsetYAction_ = OffsetAxisTo.create({duration: dur, offset: 0, axis: 'y'});
+            playYAction = true;
+
+        } else if (!entity.get('grounded')) {
+            this.landed_ = false;
+            if (this.offsetYAction_) {
+                cocos.ActionManager.get('sharedManager').removeAction(this.offsetYAction_);
+                delete this.offsetYAction_;
+            }
+
+            // If edge of screen then track entity's movement -- otherwise leave it move
+            if ((vector.y > 0 && entityBoxRel.origin.y + entityBoxRel.size.height > (cameraBox.size.height/2) + moveTolerance.y) || (vector.y < 0 && entityBoxRel.origin.y < (cameraBox.size.height/2) - moveTolerance.y)) {
+                newOffset.y += vector.y;
+            }
+        }
+        
+        
+
         if (this.get('worldBound')) {
             // Adjust offset to fit inside world
             var offsetPos = geo.ccpAdd(newPosition, newOffset);
@@ -240,8 +283,18 @@ var PlayerCamera = Camera.extend(/** @lends coconut.entities.PlayerCamera# */{
             newOffset = geo.ccpAdd(newOffset, outside);
         }
 
-        this.set('offset', newOffset);
+        if (newOffset.x != offset.x || newOffset.y != offset.y) {
+            this.set('offset', newOffset);
+        }
         this.set('position', newPosition);
+
+
+        if (playXAction) {
+            this.runAction(this.offsetXAction_);
+        }
+        if (playYAction) {
+            this.runAction(this.offsetYAction_);
+        }
     }
 });
 
