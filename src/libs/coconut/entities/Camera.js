@@ -240,7 +240,23 @@ var PlayerCamera = Camera.extend(/** @lends coconut.entities.PlayerCamera# */{
                     cocos.ActionManager.get('sharedManager').removeAction(this.offsetXAction_);
                     delete this.offsetXAction_;
                 }
-                newOffset = geo.ccp(offset.x - vector.x, offset.y);
+                newOffset.x = offset.x - vector.x;
+            }
+
+            // Walking in direction of tracking 
+            else {
+                var requiredOffset = Math.round(cameraBox.size.width/2);
+                if (trackDirection == PlayerCamera.TRACK_RIGHT) {
+                    requiredOffset -= entityOffset + entityBoxRel.size.width;
+                    if (Math.round(entityBoxRel.origin.x) < requiredOffset) {
+                        newOffset.x = offset.x - vector.x;
+                    }
+                } else if (trackDirection == PlayerCamera.TRACK_LEFT) {
+                    requiredOffset += entityOffset;
+                    if (Math.round(entityBoxRel.origin.x) > requiredOffset) {
+                        newOffset.x = offset.x - vector.x;
+                    }
+                }
             }
         }
 
@@ -287,7 +303,6 @@ var PlayerCamera = Camera.extend(/** @lends coconut.entities.PlayerCamera# */{
             this.set('offset', newOffset);
         }
         this.set('position', newPosition);
-
 
         if (playXAction) {
             this.runAction(this.offsetXAction_);

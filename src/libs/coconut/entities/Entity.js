@@ -81,8 +81,8 @@ var Entity = cocos.nodes.Node.extend(/** @lends coconut.entities.Entity# */{
             ap = this.get('anchorPointInPixels'),
             rect = geo.rectMake(0, 0, cs.width, cs.height);
     
-        rect.origin.x = pos.x - ap.x;
-        rect.origin.y = pos.y - ap.y;
+        rect.origin.x = Math.round(pos.x - ap.x);
+        rect.origin.y = Math.round(pos.y - ap.y);
 
         return rect;
     }
