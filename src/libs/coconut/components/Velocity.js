@@ -1,22 +1,27 @@
+/*globals module exports resource require BObject BArray*/
+/*jslint undef: true, strict: true, white: true, newcap: true, browser: true, indent: 4 */
+"use strict";
+
 var Component = require('./Component').Component,
-    event = require('event'),
+    events = require('events'),
     util = require('util'),
     geo = require('geometry'),
     ccp = geo.ccp;
 
-/** @member coconut.components
- * @class
- * @extends coconut.components.Component
- */
-var Velocity = Component.extend(/** @scope coconut.components.Velocity# */{
+var Velocity = Component.extend(/** @lends coconut.components.Velocity# */{
     velocity: null,
 
-    init: function(opts) {
-        @super;
+    /**
+     * @memberOf coconut.components
+     * @extends coconut.components.Component
+     * @constructs
+     */
+    init: function () {
+        Velocity.superclass.init.call(this);
 
         this.set('velocity', ccp(0, 0));
 
-        event.addListener(this, 'entity_changed', util.callback(this, function(oldVal) {
+        events.addListener(this, 'entity_changed', util.callback(this, function (oldVal) {
             var ent = this.get('entity');
 
             // Bind the entities velocity to this
@@ -24,7 +29,7 @@ var Velocity = Component.extend(/** @scope coconut.components.Velocity# */{
         }));
     },
 
-    update: function(dt) {
+    update: function (dt) {
         var entity = this.get('entity'),
             dist   = geo.ccpMult(this.get('velocity'), ccp(dt, dt)),
             oldPos = entity.get('position'),

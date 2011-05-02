@@ -1,3 +1,7 @@
+/*globals module exports resource require BObject BArray*/
+/*jslint undef: true, strict: true, white: true, newcap: true, browser: true, indent: 4 */
+"use strict";
+
 var Component = require('./Component').Component,
     geo = require('geometry'),
     ccp = geo.ccp;
@@ -19,13 +23,13 @@ var STATES = {
 var Actor = Component.extend(/** @scope coconut.components.Actor# */{
     _jumpHeldFor: 0,
     maxJumpTime: 0.25,
-    jumpVelocity: 200,
+    jumpVelocity: 170,
 
-    init: function(opts) {
-        @super;
+    init: function (opts) {
+        Actor.superclass.init.call(this, opts);
     },
 
-    update: function(dt) {
+    update: function (dt) {
         var entity = this.get('entity'),
             // Entity's controller class
             controller = entity.get('controller'),

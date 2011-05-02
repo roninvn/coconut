@@ -1,7 +1,11 @@
-var cocos = require('cocos2d'),
-    util  = require('util'),
-    event = require('event'),
-    geo   = require('geometry');
+/*globals module exports resource require BObject BArray*/
+/*jslint undef: true, strict: true, white: true, newcap: true, browser: true, indent: 4 */
+"use strict";
+
+var cocos  = require('cocos2d'),
+    util   = require('util'),
+    events = require('events'),
+    geo    = require('geometry');
 
 var World = cocos.nodes.Layer.extend(/** @scope coconut.World# */{
     entities: null,
@@ -15,8 +19,8 @@ var World = cocos.nodes.Layer.extend(/** @scope coconut.World# */{
      * @extends cocos.nodes.Layer
      * @constructs
      */
-    init: function() {
-        @super;
+    init: function () {
+        World.superclass.init.call(this);
 
         this.set('isKeyboardEnabled', true);
 
@@ -24,10 +28,10 @@ var World = cocos.nodes.Layer.extend(/** @scope coconut.World# */{
         this.set('keyboardObservers', BArray.create());
         this.set('cameras', BArray.create());
 
-        event.addListener(this, 'currentcamera_changed', util.callback(this, this.updateCameraTracking));
+        events.addListener(this, 'currentcamera_changed', util.callback(this, this.updateCameraTracking));
     },
 
-    addCamera: function(camera) {
+    addCamera: function (camera) {
         this.get('cameras').push(camera);
 
         if (!this.get('currentCamera')) {
@@ -37,7 +41,7 @@ var World = cocos.nodes.Layer.extend(/** @scope coconut.World# */{
         this.addEntity(camera);
     },
 
-    addEntity: function(entity) {
+    addEntity: function (entity) {
         if (!this.get('worldSize')) {
             this.set('worldSize', util.copy(entity.get('contentSize')));
         }
@@ -46,7 +50,7 @@ var World = cocos.nodes.Layer.extend(/** @scope coconut.World# */{
         this.addChild(entity);
         return this;
     },
-    removeEntity: function(entity) {
+    removeEntity: function (entity) {
         var idx = this.entities.indexOf(entity);
         if (idx == -1) {
             throw "Entity isn't part of this world";
@@ -71,7 +75,7 @@ var World = cocos.nodes.Layer.extend(/** @scope coconut.World# */{
         this.keyboardObservers.splice(idx, 1);
     },
 
-    keyDown: function(evt) {
+    keyDown: function (evt) {
         for (var i = 0, len = this.keyboardObservers.length; i < len; i++) {
             var thing = this.keyboardObservers.getAt(i);
             if (thing.keyDown) {
@@ -80,7 +84,7 @@ var World = cocos.nodes.Layer.extend(/** @scope coconut.World# */{
         }
     },
 
-    keyUp: function(evt) {
+    keyUp: function (evt) {
         for (var i = 0, len = this.keyboardObservers.length; i < len; i++) {
             var thing = this.keyboardObservers.getAt(i);
             if (thing.keyUp) {
@@ -89,7 +93,7 @@ var World = cocos.nodes.Layer.extend(/** @scope coconut.World# */{
         }
     },
 
-    updateView: function() {
+    updateView: function () {
         var cam = this.get('currentCamera'),
             camPos = geo.ccpAdd(cam.get('position'), cam.get('offset')),
             camAnchor = cam.get('anchorPointInPixels'),
@@ -98,16 +102,16 @@ var World = cocos.nodes.Layer.extend(/** @scope coconut.World# */{
         this.set('position', newPos);
     },
 
-    updateCameraTracking: function(oldCamera) {
+    updateCameraTracking: function (oldCamera) {
         if (this.cameraListener_) {
-            event.removeListener(this.cameraListener_);
+            events.removeListener(this.cameraListener_);
         }
 
-        this.cameraListener_ = event.addListener(this.get('currentCamera'), 'position_changed', util.callback(this, this.updateView));
+        this.cameraListener_ = events.addListener(this.get('currentCamera'), 'position_changed', util.callback(this, this.updateView));
         this.updateView();
     },
 
-    get_boundingBox: function() {
+    get_boundingBox: function () {
         var worldSize = this.get('worldSize');
         return geo.rectMake(0, 0, worldSize.width, worldSize.height);
     }

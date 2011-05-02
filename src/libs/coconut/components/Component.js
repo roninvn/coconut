@@ -1,3 +1,7 @@
+/*globals module exports resource require BObject BArray*/
+/*jslint undef: true, strict: true, white: true, newcap: true, browser: true, indent: 4 */
+"use strict";
+
 var Component = BObject.extend(/** @scope coconut.components.Component# */{
     entity: null,
 
@@ -6,11 +10,11 @@ var Component = BObject.extend(/** @scope coconut.components.Component# */{
      * @extends BObject
      * @constructs
      */
-    init: function(opts) {
-        @super;
+    init: function () {
+        Component.superclass.init.call(this);
     },
 
-    update: function(dt) {
+    update: function (dt) {
     }
 });
 

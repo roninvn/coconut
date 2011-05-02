@@ -1,5 +1,9 @@
+/*globals module exports resource require BObject BArray*/
+/*jslint undef: true, strict: true, white: true, newcap: true, browser: true, indent: 4 */
+"use strict";
+
 var Component = require('./Component').Component,
-    event = require('event'),
+    events = require('events'),
     geo = require('geometry'),
     util = require('util'),
     ccp = geo.ccp;
@@ -13,10 +17,10 @@ var STATES = require('./Actor').Actor.STATES;
 var Controller = Component.extend(/** @scope coconut.components.Controller# */{
 	states: STATES.idle,
 
-    init: function(opts) {
-        @super;
+    init: function () {
+        Controller.superclass.init.call(this);
 
-        event.addListener(this, 'entity_changed', util.callback(this, function(oldVal) {
+        events.addListener(this, 'entity_changed', util.callback(this, function (oldVal) {
             if (oldVal && oldVal.get('controller') == this) {
                 oldVal.set('controller', null);
             }
@@ -28,22 +32,22 @@ var Controller = Component.extend(/** @scope coconut.components.Controller# */{
         }));
     },
 
-    update: function(dt) {
+    update: function (dt) {
     },
 
-    initEntity: function(self, key, entity) {
+    initEntity: function (self, key, entity) {
 		entity.controller = this;
     },
 
-	addState: function(state) {
+	addState: function (state) {
 		this.states |= state;
 	},
 
-	removeState: function(state) {
+	removeState: function (state) {
 		this.states ^= state;
 	},
 
-	hasState: function(state) {
+	hasState: function (state) {
 		return this.states & state;
 	}
 });
@@ -67,11 +71,12 @@ var keyMap = {
  * @extends coconut.components.Controller
  */
 var KeyboardController = Controller.extend(/** @scope coconut.components.KeyboardController# */{
-	init: function(opts) {
-        @super;
+
+	init: function () {
+        KeyboardController.superclass.init.call(this);
 
         // Bind to the world of the entity
-        event.addListener(this, 'entity_changed', util.callback(this, function(oldVal) {
+        events.addListener(this, 'entity_changed', util.callback(this, function (oldVal) {
 
             if (this.entity) {
                 this.bindTo('world', this.entity);
@@ -81,7 +86,7 @@ var KeyboardController = Controller.extend(/** @scope coconut.components.Keyboar
         }));
 
         // Register with world's keyboard handler
-        event.addListener(this, 'world_changed', util.callback(this, function(oldVal) {
+        events.addListener(this, 'world_changed', util.callback(this, function (oldVal) {
             if (oldVal) {
                 oldVal.deregisterKeyboardObserver(this);
             }
@@ -93,7 +98,7 @@ var KeyboardController = Controller.extend(/** @scope coconut.components.Keyboar
         }));
 	},
 
-	keyDown: function(evt) {
+	keyDown: function (evt) {
 		var key = keyMap[evt.keyCode];
 		if (!key) {
 			return;
@@ -102,7 +107,7 @@ var KeyboardController = Controller.extend(/** @scope coconut.components.Keyboar
 		this.addState(key);
 	},
 
-	keyUp: function(evt) {
+	keyUp: function (evt) {
 		var key = keyMap[evt.keyCode];
 		if (!key) {
 			return;

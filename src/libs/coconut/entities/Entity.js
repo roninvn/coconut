@@ -1,5 +1,9 @@
+/*globals module exports resource require BObject BArray*/
+/*jslint undef: true, strict: true, white: true, newcap: true, browser: true, indent: 4 */
+"use strict";
+
 var cocos = require('cocos2d'),
-    event = require('event'),
+    events = require('events'),
     util  = require('util'),
     geo   = require('geometry'),
     components = require('../components');
@@ -14,18 +18,18 @@ var Entity = cocos.nodes.Node.extend(/** @lends coconut.entities.Entity# */{
      * @extends cocos.nodes.Node
      * @constructs
      */
-    init: function() {
-        @super;
+    init: function () {
+        Entity.superclass.init.call(this);
 
         this.components = [];
         this.scheduleUpdate();
 
-        event.addListener(this, 'position_changed', util.callback(this, function(oldVal) {
+        events.addListener(this, 'position_changed', util.callback(this, function (oldVal) {
             this.set('previousPosition', oldVal);
         }));
     },
 
-    addComponent: function(opts) {
+    addComponent: function (opts) {
         if (typeof(opts) == 'string') {
             opts = {component: opts};
         }
@@ -58,24 +62,24 @@ var Entity = cocos.nodes.Node.extend(/** @lends coconut.entities.Entity# */{
         return component;
     },
 
-    removeComponent: function(component) {
+    removeComponent: function (component) {
         var idx = this.components.indexOf(component);
         if (idx == -1) {
             throw "Component isn't part of this Entity";
         }
-        entity.set('entity', null);
+        component.set('entity', null);
 
         this.components.splice(idx, 1);
         return this;
     },
 
-    update: function(dt) {
+    update: function (dt) {
         for (var i = 0, len = this.components.length; i < len; i++) {
             this.components[i].update(dt);
         }
     },
 
-    get_boundingBox: function() {
+    get_boundingBox: function () {
         var cs = this.get('contentSize'),
             pos = this.get('position'),
             ap = this.get('anchorPointInPixels'),
