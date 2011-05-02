@@ -55,6 +55,7 @@ var Collides = Component.extend(/** @scope coconut.components.Collides# */{
 
         var ent = this.entity,
             pos = ent.get('position'),
+            ap  = ent.get('anchorPointInPixels'),
             prevPos = ent.get('previousPosition'),
             distance = geo.ccpSub(pos, prevPos);
 
@@ -75,7 +76,7 @@ var Collides = Component.extend(/** @scope coconut.components.Collides# */{
                 newX = newPos.x + dist.x;
                 if ((tileX = this.collisionYEdge(ccp(newX + ent.contentSize.width + 1, newPos.y))) !== false) {
                     dist.x = 0;
-                    newPos.x = (tileX * tileSize) - ent.contentSize.width; // Move to the edge of the tile
+                    newPos.x = (tileX * tileSize) - ent.contentSize.width + ap.x; // Move to the edge of the tile
                     velocity.x = 0;
                 } else {
                     newPos.x = newX;
@@ -88,7 +89,7 @@ var Collides = Component.extend(/** @scope coconut.components.Collides# */{
                 newX = newPos.x + dist.x;
                 if ((tileX = this.collisionYEdge(ccp(newX, newPos.y))) !== false) {
                     dist.x = 0;
-                    newPos.x = (tileX + 1) * tileSize; // Move to the edge of the tile
+                    newPos.x = (tileX + 1) * tileSize + ap.x; // Move to the edge of the tile
                     velocity.x = 0;
                 } else {
                     newPos.x = newX;
@@ -103,7 +104,7 @@ var Collides = Component.extend(/** @scope coconut.components.Collides# */{
                 newY = newPos.y + dist.y;
                 if ((tileY = this.collisionXEdge(ccp(newPos.x, newY + ent.contentSize.height + 1))) !== false) {
                     grounded = true;
-                    newPos.y = (tileY * tileSize) - ent.contentSize.height; // Move to the edge of the tile
+                    newPos.y = (tileY * tileSize) - ent.contentSize.height + ap.y; // Move to the edge of the tile
                     velocity.y = 0;
                 } else {
                     newPos.y = newY;
@@ -115,7 +116,7 @@ var Collides = Component.extend(/** @scope coconut.components.Collides# */{
                 newY = newPos.y + dist.y;
                 // Hit head?
                 if ((tileY = this.collisionXEdge(ccp(newPos.x, newY))) !== false) {
-                    newPos.y = (tileY + 1) * tileSize; // Move to the edge of the tile
+                    newPos.y = (tileY + 1) * tileSize + ap.y; // Move to the edge of the tile
                     velocity.y = 0;
                 } else {
                     newPos.y = newY;
@@ -160,10 +161,11 @@ var Collides = Component.extend(/** @scope coconut.components.Collides# */{
 
     collisionYEdge: function (point) {
         var ent = this.entity,
-            x = point.x,
-            y = point.y,
+            ap  = ent.get('anchorPointInPixels'),
             w = ent.contentSize.width,
-            h = ent.contentSize.height;
+            h = ent.contentSize.height,
+            x = point.x - ap.x,
+            y = point.y - ap.y;
 
         var tileSize = 16; // TODO get from map
 
@@ -189,10 +191,11 @@ var Collides = Component.extend(/** @scope coconut.components.Collides# */{
 
     collisionXEdge: function (point) {
         var ent = this.entity,
-            x = point.x,
-            y = point.y,
+            ap  = ent.get('anchorPointInPixels'),
             w = ent.contentSize.width,
-            h = ent.contentSize.height;
+            h = ent.contentSize.height,
+            x = point.x - ap.x,
+            y = point.y - ap.y;
 
         var tileSize = 16; // TODO get from map
 

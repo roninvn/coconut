@@ -117,12 +117,12 @@ var Actor = Component.extend(/** @scope coconut.components.Actor# */{
         else {
             // Speed change is reduced while in the air
             if (controller.hasState(STATES.right)) {
-                velocity.x += (acceleration / 1.5) *dt;
+                velocity.x += acceleration * dt;
                 if (velocity.x > maxSpeed) {
                     velocity.x = maxSpeed;
                 }
             } else if (controller.hasState(STATES.left)) {
-                velocity.x -= (acceleration / 1.5) *dt;
+                velocity.x -= acceleration * dt;
                 if (velocity.x < -maxSpeed) {
                     velocity.x = -maxSpeed;
                 }
@@ -130,12 +130,12 @@ var Actor = Component.extend(/** @scope coconut.components.Actor# */{
 
             // Velocity goes down due to air resistence
             if (velocity.x > 0) {
-                velocity.x -= (deceleration / 2) * dt;
+                velocity.x -= (deceleration * 0.25) * dt;
                 if (velocity.x < 0) {
                     velocity.x = 0;
                 }
             } else if (velocity.x < 0) {
-                velocity.x += (deceleration / 2) * dt;
+                velocity.x += (deceleration * 0.25) * dt;
                 if (velocity.x > 0) {
                     velocity.x = 0;
                 }
